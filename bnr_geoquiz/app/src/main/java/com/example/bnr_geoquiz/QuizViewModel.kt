@@ -14,6 +14,9 @@ class QuizViewModel : ViewModel() {
         Question(R.string.question_asia, true))
 
     var currentIndex = 0
+    var isCheater = false
+    var trueBtnState = true
+    var falseBtnState = true
 
     val currentQuestionAnswer : Boolean
     get() = questionBank[currentIndex].answer
@@ -24,6 +27,23 @@ class QuizViewModel : ViewModel() {
 
     fun moveToNext(){
         currentIndex = (currentIndex+1) % questionBank.size
+        isCheater = false
+    }
+
+    fun setTrueStateBtn(state : Boolean){
+        trueBtnState = state
+    }
+
+    fun setFalseStateBtn(state : Boolean){
+        falseBtnState = state
+    }
+
+    fun getTrueStateBtn() : Boolean{
+        return trueBtnState
+    }
+
+    fun getFalseStateBtn() : Boolean{
+        return falseBtnState
     }
 
     init{

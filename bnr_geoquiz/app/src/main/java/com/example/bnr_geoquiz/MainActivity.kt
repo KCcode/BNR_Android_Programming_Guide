@@ -15,6 +15,10 @@ import androidx.lifecycle.ViewModelProvider
 
 private const val TAG = "MainActivity"
 private  const val KEY_INDEX = "index"
+private  const val KEY_CHEAT = "cheat"
+private  const val KEY_TRUE_BTN = "true_btn"
+private  const val KEY_FALSE_BTN = "false_btn"
+private const val REQUEST_CHEAT_CODE = 0
 
 class MainActivity : AppCompatActivity() {
 
@@ -33,12 +37,7 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        //if(savedInstanceState != null){
-        //    quizViewModel.currentIndex = savedInstanceState?.getInt(KEY_INDEX)
-        //}
-
         Log.d(TAG, "Got a quizviewmodel: $quizViewModel")
-
 
         trueButton = findViewById(R.id.true_button)
         falseButton = findViewById(R.id.false_button)
@@ -46,12 +45,18 @@ class MainActivity : AppCompatActivity() {
         questionTextView = findViewById(R.id.question_text)
         cheatButton = findViewById(R.id.cheat_button)
 
+        //remember state of buttons upon rotation this is the UI
+        trueButton.isEnabled = quizViewModel.getTrueStateBtn()
+        falseButton.isEnabled = quizViewModel.getFalseStateBtn()
+
         trueButton.setOnClickListener{view : View ->
             //val toast = Toast.makeText(this, R.string.corrent_toast, Toast.LENGTH_SHORT)
             //toast.setGravity(Gravity.TOP, 0 , 0)
             //toast.show()
             checkAnswer(true)
-            falseButton.isEnabled = false
+            //falseButton.isEnabled = false
+            quizViewModel.setFalseStateBtn(false)
+            falseButton.isEnabled = quizViewModel.getFalseStateBtn()
         }
 
         falseButton.setOnClickListener { view : View ->
@@ -59,20 +64,28 @@ class MainActivity : AppCompatActivity() {
             //toast.setGravity(Gravity.TOP, 0 , 0)
             //toast.show()
             checkAnswer(false)
-            trueButton.isEnabled = false
+            quizViewModel.setTrueStateBtn(false)
+            trueButton.isEnabled = quizViewModel.getTrueStateBtn()
         }
 
         cheatButton.setOnClickListener { view : View ->
             //start cheat activity
-            val intent = Intent(this, CheatActivity::class.java)
-            startActivity(intent)
+            val answerIsTrue = quizViewModel.currentQuestionAnswer
+            val intent = CheatActivity.newIntent(this@MainActivity, answerIsTrue)
+            startActivityForResult(intent,  REQUEST_CHEAT_CODE)
         }
 
         nextButton.setOnClickListener { view : View ->
             quizViewModel.moveToNext()
             updateQuestion()
+            quizViewModel.setTrueStateBtn(true)
+            quizViewModel.setFalseStateBtn(true)
             trueButton.isEnabled = true
             falseButton.isEnabled = true
+
+
+            //trueButton.isEnabled = true
+            //falseButton.isEnabled = true
         }
 
         updateQuestion()
@@ -113,11 +126,10 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAnswer(userAnswer : Boolean){
         val correctAnswer = quizViewModel.currentQuestionAnswer
-        val messageId = if (correctAnswer == userAnswer){
-            R.string.corrent_toast
-        }
-        else{
-            R.string.incorrect_toast
+        val messageId = when{
+            quizViewModel.isCheater -> R.string.judgment_toast
+            userAnswer == correctAnswer-> R.string.corrent_toast
+            else -> R.string.incorrect_toast
         }
         Toast.makeText(this, messageId, Toast.LENGTH_SHORT).show()
     }
@@ -126,6 +138,9 @@ class MainActivity : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         Log.d(TAG, "onSaveInstanceState")
         outState?.putInt(KEY_INDEX, quizViewModel.currentIndex)
+        outState?.putBoolean(KEY_CHEAT, quizViewModel.isCheater)
+        outState?.putBoolean(KEY_TRUE_BTN, quizViewModel.trueBtnState)
+        outState?.putBoolean(KEY_FALSE_BTN, quizViewModel.falseBtnState)
     }
 
 
@@ -134,5 +149,19 @@ class MainActivity : AppCompatActivity() {
             val currentIndex = savedInstanceState?.getInt(KEY_INDEX, 0) ?: 0
             quizViewModel.currentIndex = currentIndex
 
+            quizViewModel.isCheater = savedInstanceState?.getBoolean(KEY_CHEAT) ?: false
+            quizViewModel.trueBtnState = savedInstanceState?.getBoolean(KEY_TRUE_BTN) ?: false
+            quizViewModel.falseBtnState = savedInstanceState?.getBoolean(KEY_FALSE_BTN) ?: false
+
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if(resultCode != Activity.RESULT_OK){
+            return
+        }
+        if(requestCode == REQUEST_CHEAT_CODE){
+            quizViewModel.isCheater = data?.getBooleanExtra(EXTRA_ANSWER_SHOWN, false) ?: false
+        }
     }
 }
